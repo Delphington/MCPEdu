@@ -1,0 +1,78 @@
+version: "3.9"
+name: mcpulsor-server-and-inspector
+
+services:
+  #
+  #  server-stdio:
+  #    build:
+  #      context: ..                  # <= REPO ROOT so parent POM is visible
+  #      dockerfile: mcpulsor-server/Dockerfile
+  #      target: stdio
+  #      argso:
+  #        MODULE_DIR: mcpulsor-server         # build the server module
+  #        #MAIN_CLASS: edu.example.McpExampleServerApplication
+  #    image: mcpulsor-server:stdio
+  #    container_name: mcpulsor-server-stdio
+  #    environment:
+  #      HOST: "0.0.0.0"
+  #      MCP_TRANSPORT: "STDIO"
+  #      ALLOWED_ORIGINS: "http://localhost:6274"
+  #      #DANGEROUSLY_OMIT_AUTH: "true"e
+  #    ports:
+  #      - "6274:6274"                # Inspector UI (stdio)
+  #      - "6277:6277"                # Inspector proxy (stdio)
+  #
+
+  # -------- HTTP: Java MCP server -----------------------------
+  server-http:
+    build:
+      context: .                   # корень репозитория (где docker-compose.yml и .dockerignore)
+      dockerfile: ./mc-pulsor-server/Dockerfile
+      target: http
+      args:
+        MODULE_DIR: ./mc-pulsor-server
+        #MAIN_CLASS: edu.borisov.mcpulsor.server.McpulsorServerApplication
+    image: mcpulsor-server:http
+    container_name: mcpulsor-server-http
+    expose:
+      - "8091"
+    ports:
+      - "8091:8091"
+
+
+  #   -------- Inspector for the HTTP server (UI -> localhost:6274) ---------------------
+  inspector-http:
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+    container_name: mcp-inspector-http
+    depends_on:
+      - server-http
+    environment:
+      HOST: "0.0.0.0"
+      ALLOWED_ORIGINS: "http://localhost:6274"
+    ports:
+      - "6274:6274"                # Inspector UI (http)
+      - "6277:6277"                # Inspector proxy (http)
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [ gpu ]
+    entrypoint: >
+      /bin/sh -c "
+        ollama serve &
+        sleep 2 &&
+        ollama pull gemma3:4b-it-q4_K_M &&
+        ollama pull PetrosStav/gemma3-tools:4b
+        wait
+      "
+    restart: unless-stopped

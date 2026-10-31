@@ -1,0 +1,14 @@
+# IDE
+.idea/
+
+# Артефакты ОС
+.DS_Store
+
+# Результаты сборки Maven
+target/
+
+# Docker-том с моделями Ollama (docker-compose монтирует ./ollama)
+ollama/
+
+# Сессионные данные oh-my-claudecode
+.omc/
